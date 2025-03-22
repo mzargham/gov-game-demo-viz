@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bipartite Governance Game Graph</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; }
+    .node circle { stroke: #fff; stroke-width: 1.5px; }
+    .link { stroke: #999; stroke-opacity: 0.6; }
+    .tooltip {
+      position: absolute;
+      text-align: left;
+      padding: 8px;
+      font-size: 14px;
+      background: #f9f9f9;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      pointer-events: none;
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+<svg width="960" height="600"></svg>
+<div class="tooltip" id="tooltip"></div>
+<script>
+const nodes = [
+  { id: "A1", label: "Farmer: Rosa Salinas", type: "actor", details: "Ecological farmer with soil data" },
+  { id: "A2", label: "Coop: Rio Mesa", type: "actor", details: "Aggregates farmers & negotiates" },
+  { id: "A3", label: "AI Firm: ThreeSisters", type: "actor", details: "Offers crop optimization AI" },
+  { id: "AG1", label: "Agreement: Coop Membership Pact", type: "agreement", details: "Farmers join the coop" },
+  { id: "AG2", label: "Agreement: AI Tool Discount Exchange", type: "agreement", details: "Data for discounted tools" },
+];
+
+const links = [
+  { source: "A1", target: "AG1", label: "Obligation: Share data" },
+  { source: "AG1", target: "A1", label: "Benefit: Shared services" },
+  { source: "A2", target: "AG1", label: "Benefit: Authority to negotiate" },
+  { source: "A2", target: "AG2", label: "Obligation: Pooled data" },
+  { source: "AG2", target: "A2", label: "Benefit: Discount access" },
+  { source: "AG2", target: "A3", label: "Obligation: Discount + insights" },
+  { source: "A3", target: "AG2", label: "Benefit: Real-world farm data" }
+];
+
+const svg = d3.select("svg"),
+      width = +svg.attr("width"),
+      height = +svg.attr("height");
+
+const tooltip = d3.select("#tooltip");
+
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(160))
+  .force("charge", d3.forceManyBody().strength(-600))
+  .force("center", d3.forceCenter(width / 2, height / 2));
+
+const link = svg.append("g")
+  .selectAll("line")
+  .data(links)
+  .join("line")
+  .attr("class", "link")
+  .attr("stroke-width", 2);
+
+const node = svg.append("g")
+  .selectAll("circle")
+  .data(nodes)
+  .join("circle")
+  .attr("r", 20)
+  .attr("fill", d => d.type === "actor" ? "green" : "steelblue")
+  .call(drag(simulation))
+  .on("mouseover", (event, d) => {
+    tooltip.style("visibility", "visible")
+           .html(`<strong>${d.label}</strong><br>${d.details}`)
+           .style("top", (event.pageY + 10) + "px")
+           .style("left", (event.pageX + 10) + "px");
+  })
+  .on("mouseout", () => tooltip.style("visibility", "hidden"));
+
+const label = svg.append("g")
+  .selectAll("text")
+  .data(nodes)
+  .join("text")
+  .attr("dy", 4)
+  .attr("x", 25)
+  .text(d => d.label);
+
+simulation.on("tick", () => {
+  link
+    .attr("x1", d => d.source.x)
+    .attr("y1", d => d.source.y)
+    .attr("x2", d => d.target.x)
+    .attr("y2", d => d.target.y);
+
+  node
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y);
+
+  label
+    .attr("x", d => d.x)
+    .attr("y", d => d.y);
+});
+
+function drag(simulation) {
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+  return d3.drag()
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended);
+}
+</script>
+</body>
+</html>
